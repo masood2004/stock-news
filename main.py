@@ -27,13 +27,10 @@ response = requests.get(url=alphavantage_url, params=alphavantage_parameters)
 response.raise_for_status()
 data = response.json()
 
-price_yesterday = float(data[
-    "Time Series (60min)"][f"2025-03-{current_date - 2} 19:00:00"]["4. close"])
-price_day_before_yesterday = float(data[
-    "Time Series (60min)"][f"2025-03-{current_date - 3} 19:00:00"]["4. close"])
+price_yesterday = float(data["Time Series (60min)"][f"2025-03-{current_date - 2} 19:00:00"]["4. close"])
+price_day_before_yesterday = float(data["Time Series (60min)"][f"2025-03-{current_date - 3} 19:00:00"]["4. close"])
 
-percentage_change = round((
-    (price_yesterday-price_day_before_yesterday)/price_day_before_yesterday)*100, 2)
+percentage_change = round(((price_yesterday-price_day_before_yesterday)/price_day_before_yesterday)*100, 2)
 
 
 # get the first 3 news pieces for the TSLA.
