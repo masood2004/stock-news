@@ -27,7 +27,10 @@ response = requests.get(url=alphavantage_url, params=alphavantage_parameters)
 response.raise_for_status()
 data = response.json()
 
-print(data["Time Series (60min)"])
+if "Time Series (60min)" in data:
+    print(data["Time Series (60min)"])
+else:
+    print("Key 'Time Series (60min)' not found in the API response")
 
 price_yesterday = float(data["Time Series (60min)"][f"2025-03-{current_date - 2} 19:00:00"]["4. close"])
 price_day_before_yesterday = float(data["Time Series (60min)"][f"2025-03-{current_date - 3} 19:00:00"]["4. close"])
