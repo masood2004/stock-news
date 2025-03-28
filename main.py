@@ -28,7 +28,7 @@ def fetch_stock_prices(symbol):
     }
     response = requests.get(ALPHA_URL, params=params)
     response.raise_for_status()
-    data = response.json()["Time Series (60min)"]
+    data = response.json()['Time Series (60min)']
 
     # Extract the latest two available closing prices at 19:00:00
     timestamps = sorted([ts for ts in data if ts.endswith("19:00:00")], reverse=True)
