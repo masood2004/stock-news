@@ -1,91 +1,88 @@
 from dotenv import load_dotenv
 import os
 import requests
-from datetime import datetime as dt, timedelta
+from datetime import datetime as dt
 from twilio.rest import Client
 
-# Load environment variables
 load_dotenv()
-ALPHA_VANTAGE_API_KEY = os.getenv("API_KEY")
-NEWS_API_KEY = os.getenv("NEWS_API")
-TWILIO_SID = os.getenv("ACCOUNT_SID")
-TWILIO_AUTH = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_FROM = 'whatsapp:+14155238886'
-TWILIO_TO = 'whatsapp:+923103288291'
 
 STOCK = "TSLA"
 COMPANY_NAME = "Tesla Inc"
-ALPHA_URL = "https://www.alphavantage.co/query"
-NEWS_URL = "https://newsapi.org/v2/everything"
+account_sid = os.getenv("ACCOUNT_SID")
+auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+
+alphavantage_url = "https://www.alphavantage.co/query"
+current_date = int(str(dt.now().date()).split("-")[2])
+
+# Fetch STOCK price increase/decreases by 5% between yesterday and the day before yesterday
+
+alphavantage_parameters = {
+    "function": "TIME_SERIES_INTRADAY",
+    "symbol": "TSLA",
+    "interval": "60min",
+    "apikey": os.getenv("API_KEY"),
+}
+
+response = requests.get(url=alphavantage_url, params=alphavantage_parameters)
+response.raise_for_status()
+data = response.json()
+
+price_yesterday = float(data["Time Series (60min)"][f"2025-03-{current_date - 2} 19:00:00"]["4. close"])
+price_day_before_yesterday = float(data["Time Series (60min)"][f"2025-03-{current_date - 3} 19:00:00"]["4. close"])
+
+percentage_change = round(((price_yesterday-price_day_before_yesterday)/price_day_before_yesterday)*100, 2)
 
 
-def fetch_stock_prices(symbol):
-    params = {
-        "function": "TIME_SERIES_INTRADAY",
-        "symbol": symbol,
-        "interval": "60min",
-        "apikey": ALPHA_VANTAGE_API_KEY,
-    }
-    response = requests.get(ALPHA_URL, params=params)
-    response.raise_for_status()
-    data = response.json()['Time Series (60min)']
+# get the first 3 news pieces for the TSLA.
 
-    # Extract the latest two available closing prices at 19:00:00
-    timestamps = sorted([ts for ts in data if ts.endswith("19:00:00")], reverse=True)
-    if len(timestamps) < 2:
-        raise ValueError("Not enough data points for comparison")
+news_parameters = {
+    "apiKey": os.getenv("NEWS_API"),
+    "q": "TSLA",
+}
 
-    latest_close = float(data[timestamps[0]]["4. close"])
-    previous_close = float(data[timestamps[1]]["4. close"])
-    percentage_change = round(((latest_close - previous_close) / previous_close) * 100, 2)
-    return percentage_change
+response = requests.get(
+    url="https://newsapi.org/v2/everything", params=news_parameters)
+response.raise_for_status()
+data = response.json()["articles"]
 
+article1_title = data[0]["title"]
+article1_description = data[0]["description"]
 
-def fetch_news(query, limit=3):
-    params = {
-        "apiKey": NEWS_API_KEY,
-        "q": query,
-        "sortBy": "publishedAt",
-        "language": "en"
-    }
-    response = requests.get(NEWS_URL, params=params)
-    response.raise_for_status()
-    articles = response.json()["articles"][:limit]
-    return [(a["title"], a["description"]) for a in articles]
+article2_title = data[1]["title"]
+article2_description = data[1]["description"]
+
+article3_title = data[2]["title"]
+article3_description = data[2]["description"]
 
 
-def format_message(stock, change, news_articles):
-    symbol = "🔺" if change >= 0 else "🔻"
-    message = [f"*{stock}:* {symbol} {abs(change)}%"]
+# Send a seperate message with the percentage change and each article's title and description to your phone number.
 
-    for title, desc in news_articles:
-        message.append(f"\n*Headline:* {title}\n*Brief:* {desc}")
-
-    return "\n".join(message)
-
-
-def send_whatsapp_message(body):
-    client = Client(TWILIO_SID, TWILIO_AUTH)
-    try:
-        message = client.messages.create(
-            body=body,
-            from_=TWILIO_FROM,
-            to=TWILIO_TO
-        )
-        print(f"Message sent successfully. SID: {message.status}")
-    except Exception as e:
-        print(f"Failed to send message: {e}")
+def symbol(percentage):
+    if percentage < 0:
+        return "🔻"
+    else:
+        return "🔺"
 
 
-def main():
-    try:
-        change = fetch_stock_prices(STOCK)
-        news = fetch_news(STOCK)
-        message = format_message(STOCK, change, news)
-        send_whatsapp_message(message)
-    except Exception as e:
-        print(f"Error: {e}")
+message_body = f"""*TSLA:* {symbol(percentage_change)} {abs(percentage_change)}%
 
+*Headline:* {article1_title}
+*Brief:* {article1_description}
 
-if __name__ == "__main__":
-    main()
+*Headline:* {article2_title}
+*Brief:* {article2_description}
+
+*Headline:* {article3_title}
+*Brief:* {article3_description}"""
+
+client = Client(account_sid, auth_token)
+
+try:
+    message = client.messages.create(
+        body=message_body,
+        from_='whatsapp:+14155238886',
+        to='whatsapp:+923103288291'
+    )
+    print(f"Message sent: {message.status}")
+except Exception as e:
+    print(f"Error sending message: {e}")

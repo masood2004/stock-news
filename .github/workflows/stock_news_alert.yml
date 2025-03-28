@@ -2,12 +2,13 @@ name: Stock News Alert
 
 on:
   schedule:
-    - cron: "0 19 * * *" # Daily at 12:00 AM GMT+5
-  workflow_dispatch:
+    - cron: "0 19 * * *" # Runs daily at 12:00 AM GMT+5 (i.e., 7:00 PM UTC)
+  workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
   run-stock-news:
     runs-on: ubuntu-latest
+    environment: Stock News
 
     steps:
       - name: Checkout repository
@@ -18,30 +19,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Validate environment variables
-        run: |
-          : "${ACCOUNT_SID:?Missing ACCOUNT_SID}"
-          : "${TWILIO_AUTH_TOKEN:?Missing TWILIO_AUTH_TOKEN}"
-          : "${API_KEY:?Missing API_KEY}"
-          : "${NEWS_API:?Missing NEWS_API}"
-        env:
-          ACCOUNT_SID: ${{ secrets.ACCOUNT_SID }}
-          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-          API_KEY: ${{ secrets.API_KEY }}
-          NEWS_API: ${{ secrets.NEWS_API }}
 
       - name: Run stock news script
         env:
@@ -49,11 +30,5 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           API_KEY: ${{ secrets.API_KEY }}
           NEWS_API: ${{ secrets.NEWS_API }}
-        run: python main.py
-
-      - name: Confirm success
-        if: success()
         run: |
-          echo "✅ Stock news script ran successfully"
-          echo "UTC Time: $(date -u)"
-          echo "Local Time (GMT+5): $(TZ='Asia/Karachi' date)"
+          python main.py
