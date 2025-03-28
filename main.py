@@ -17,8 +17,6 @@ TWILIO_WHATSAPP_TO = "whatsapp:+923103288291"
 # Load credentials
 account_sid = os.getenv("ACCOUNT_SID")
 auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-alpha_api_key = os.getenv("API_KEY")
-news_api_key = os.getenv("NEWS_API")
 
 # Function to fetch stock prices
 
@@ -28,7 +26,7 @@ def fetch_stock_prices():
         "function": "TIME_SERIES_INTRADAY",
         "symbol": STOCK,
         "interval": "60min",
-        "apikey": alpha_api_key,
+        "apikey": os.getenv("API_KEY"),
     }
 
     response = requests.get(ALPHAVANTAGE_URL, params=params)
@@ -68,7 +66,7 @@ def calculate_percentage_change(new, old):
 
 def fetch_news():
     params = {
-        "apiKey": news_api_key,
+        "apiKey": os.getenv("NEWS_API"),
         "qInTitle": COMPANY_NAME,
         "language": "en",
         "sortBy": "publishedAt",
